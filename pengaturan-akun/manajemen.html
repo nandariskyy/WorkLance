@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Manajemen Akun | WorkLance</title>
+  </head>
+  <body class="bg-gray-50 font-sans min-h-screen flex flex-col">
+    <!-- Navbar -->
+    <nav class="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-20 items-center">
+          <!-- Logo -->
+          <a href="../index.html" class="flex items-center gap-2 group">
+            <div
+              class="w-10 h-10 bg-dark text-white rounded-xl flex items-center justify-center font-bold text-xl group-hover:scale-105 transition-transform duration-300 shadow-md"
+            >
+              W
+            </div>
+            <span class="text-2xl font-bold text-dark tracking-tight"
+              >Work<span class="text-accent">Lance</span></span
+            >
+          </a>
+
+          <!-- User Menu (Logged In State) -->
+          <div class="flex items-center gap-4">
+            <a
+              href="informasi-akun.html"
+              class="text-sm font-bold text-dark hover:text-accent transition-colors hidden sm:block"
+              >Budi Santoso</a
+            >
+            <div
+              class="w-10 h-10 bg-primary/20 text-primary rounded-full flex items-center justify-center font-bold relative cursor-pointer"
+            >
+              B
+              <div
+                class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main
+      class="flex-grow w-full px-6 lg:px-16 py-10 grid grid-cols-1 md:grid-cols-12 gap-8"
+    >
+      <!-- Sidebar Navigation -->
+      <aside class="md:col-span-3 lg:col-span-3">
+        <div
+          class="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sticky top-24 h-fit"
+        >
+          <ul class="space-y-1">
+            <li>
+              <a
+                href="informasi-akun.html"
+                class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-semibold transition-all duration-200 text-gray-500 hover:bg-gray-50 hover:text-dark"
+              >
+                <svg
+                  class="w-5 h-5 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  ></path>
+                </svg>
+                Informasi Akun
+              </a>
+            </li>
+            <li>
+              <a
+                href="kontak.html"
+                class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-semibold transition-all duration-200 text-gray-500 hover:bg-gray-50 hover:text-dark"
+              >
+                <svg
+                  class="w-5 h-5 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  ></path>
+                </svg>
+                Informasi Kontak
+              </a>
+            </li>
+            <li>
+              <a
+                href="manajemen.html"
+                class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-semibold transition-all duration-200 bg-primary/10 text-primary"
+              >
+                <svg
+                  class="w-5 h-5 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  ></path>
+                </svg>
+                Manajemen Akun
+              </a>
+            </li>
+          </ul>
+        </div>
+      </aside>
+
+      <!-- Content Area -->
+      <div class="md:col-span-9">
+        <div
+          class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden"
+        >
+          <!-- SECTION 3: Manajemen Akun -->
+          <div class="p-8 md:p-10 block animate-fadeIn">
+            <div class="mb-8 border-b border-gray-100 pb-4">
+              <h1 class="text-2xl font-bold text-dark">Manajemen Akun</h1>
+              <p class="text-gray-500 mt-1 text-sm">
+                Ubah pengaturan keamanan dan kata sandi Anda disini.
+              </p>
+            </div>
+
+            <form action="#" class="space-y-6 max-w-md">
+              <div>
+                <label class="block text-sm font-bold text-dark mb-2"
+                  >Password Saat Ini</label
+                >
+                <input
+                  type="password"
+                  class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-colors"
+                  placeholder="••••••••"
+                />
+              </div>
+
+              <div class="pt-2">
+                <label class="block text-sm font-bold text-dark mb-2"
+                  >Password Baru</label
+                >
+                <input
+                  type="password"
+                  class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-colors"
+                  placeholder="Minimal 8 karakter"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-bold text-dark mb-2"
+                  >Konfirmasi Password Baru</label
+                >
+                <input
+                  type="password"
+                  class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-colors"
+                  placeholder="Ketik ulang password baru"
+                />
+              </div>
+
+              <div class="pt-4">
+                <button
+                  type="submit"
+                  class="w-full sm:w-auto bg-dark hover:bg-gray-800 text-white font-bold py-3 px-8 rounded-xl shadow-md transition-all"
+                >
+                  Perbarui Password
+                </button>
+              </div>
+            </form>
+
+            <!-- Danger Zone -->
+            <div class="mt-12 pt-8 border-t border-red-100">
+              <h2 class="text-lg font-bold text-red-600 mb-2">Hapus Akun</h2>
+              <p class="text-sm text-gray-500 mb-4">
+                Setelah Anda menghapus akun, semua data portofolio, ulasan, dan
+                pesan akan hilang secara permanen.
+              </p>
+              <button
+                class="px-5 py-2.5 bg-red-50 text-red-600 font-bold rounded-xl border border-red-200 hover:bg-red-600 hover:text-white transition-colors"
+              >
+                Hapus Akun Permanen
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <style>
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(5px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fadeIn {
+        animation: fadeIn 0.3s ease-out forwards;
+      }
+    </style>
+
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
