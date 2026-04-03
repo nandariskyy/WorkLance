@@ -1,6 +1,6 @@
 <?php
-require_once 'config/database.php';
-requireLogin();
+require_once __DIR__ . '/../config/database.php';
+requireAdminLogin();
 
 $currentPage = 'booking';
 $adminNama = $_SESSION['admin_nama'] ?? 'Admin';
@@ -71,7 +71,8 @@ $stmt = $pdo->prepare("
     SELECT b.*, p.nama_pengguna AS nama_client, j.nama_jasa
     FROM booking b
     LEFT JOIN pengguna p ON b.id_pengguna = p.id_pengguna
-    LEFT JOIN jasa j ON b.id_jasa = j.id_jasa
+    LEFT JOIN layanan l ON b.id_layanan = l.id_layanan
+    LEFT JOIN jasa j ON l.id_jasa = j.id_jasa
     WHERE $where
     ORDER BY b.id_booking DESC
 ");
@@ -92,7 +93,8 @@ if (isset($_GET['detail'])) {
         SELECT b.*, p.nama_pengguna AS nama_client, p.email, p.no_telp, j.nama_jasa, k.nama_kategori
         FROM booking b
         LEFT JOIN pengguna p ON b.id_pengguna = p.id_pengguna
-        LEFT JOIN jasa j ON b.id_jasa = j.id_jasa
+        LEFT JOIN layanan l ON b.id_layanan = l.id_layanan
+        LEFT JOIN jasa j ON l.id_jasa = j.id_jasa
         LEFT JOIN kategori k ON j.id_kategori = k.id_kategori
         WHERE b.id_booking = ?
     ");
@@ -146,6 +148,10 @@ if (isset($_GET['detail'])) {
       <a href="booking.php" class="flex items-center gap-3 px-4 py-3 bg-white/10 text-white border border-white/5 rounded-xl font-medium transition-colors">
         <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
         Booking
+      </a>
+      <a href="verifikasi.php" class="flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-white/5 hover:text-white rounded-xl font-medium transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+        Pengajuan
       </a>
       <div class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-8">Sistem</div>
       <a href="kelola.php" class="flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-white/5 hover:text-white rounded-xl font-medium transition-colors">

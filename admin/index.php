@@ -1,6 +1,6 @@
 <?php
-require_once 'config/database.php';
-requireLogin();
+require_once __DIR__ . '/../config/database.php';
+requireAdminLogin();
 
 // ============ QUERY STATISTIK DASHBOARD ============
 
@@ -8,7 +8,7 @@ requireLogin();
 $totalUser = $pdo->query("SELECT COUNT(*) FROM pengguna")->fetchColumn();
 
 // Total Freelancer
-$totalFreelancer = $pdo->query("SELECT COUNT(*) FROM freelance")->fetchColumn();
+$totalFreelancer = $pdo->query("SELECT COUNT(*) FROM pengguna WHERE id_role = 3")->fetchColumn();
 
 // Total Booking
 $totalBooking = $pdo->query("SELECT COUNT(*) FROM booking")->fetchColumn();
@@ -21,7 +21,8 @@ $stmtBooking = $pdo->query("
     SELECT b.*, p.nama_pengguna AS nama_client, j.nama_jasa
     FROM booking b
     LEFT JOIN pengguna p ON b.id_pengguna = p.id_pengguna
-    LEFT JOIN jasa j ON b.id_jasa = j.id_jasa
+    LEFT JOIN layanan l ON b.id_layanan = l.id_layanan
+    LEFT JOIN jasa j ON l.id_jasa = j.id_jasa
     ORDER BY b.tanggal_booking DESC
     LIMIT 5
 ");
@@ -29,9 +30,10 @@ $bookingTerbaru = $stmtBooking->fetchAll();
 
 // Kategori Terpopuler (berdasarkan jumlah freelancer per kategori)
 $stmtKategori = $pdo->query("
-    SELECT k.nama_kategori, COUNT(f.id_freelance) AS total
+    SELECT k.nama_kategori, COUNT(DISTINCT l.id_pengguna) AS total
     FROM kategori k
-    LEFT JOIN freelance f ON k.id_kategori = f.id_kategori
+    LEFT JOIN jasa j ON k.id_kategori = j.id_kategori
+    LEFT JOIN layanan l ON j.id_jasa = l.id_jasa
     GROUP BY k.id_kategori, k.nama_kategori
     ORDER BY total DESC
     LIMIT 3
@@ -41,11 +43,16 @@ $maxKategori = !empty($kategoriPopuler) ? max(array_column($kategoriPopuler, 'to
 
 // Freelancer belum terverifikasi / terbaru (join pengguna, kategori)
 $stmtNewFreelancer = $pdo->query("
-    SELECT f.*, p.nama_pengguna, k.nama_kategori
-    FROM freelance f
-    LEFT JOIN pengguna p ON f.id_pengguna = p.id_pengguna
-    LEFT JOIN kategori k ON f.id_kategori = k.id_kategori
-    ORDER BY f.id_freelance DESC
+    SELECT p.id_pengguna, p.nama_pengguna, 
+           (SELECT k.nama_kategori 
+            FROM layanan l 
+            JOIN jasa j ON l.id_jasa = j.id_jasa 
+            JOIN kategori k ON j.id_kategori = k.id_kategori 
+            WHERE l.id_pengguna = p.id_pengguna 
+            LIMIT 1) AS nama_kategori
+    FROM pengguna p
+    WHERE p.id_role = 3
+    ORDER BY p.id_pengguna DESC
     LIMIT 3
 ");
 $newFreelancers = $stmtNewFreelancer->fetchAll();
@@ -137,6 +144,10 @@ $currentPage = 'dashboard';
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
         </svg>
         Booking
+      </a>
+      <a href="verifikasi.php" class="flex items-center gap-3 px-4 py-3 <?= $currentPage === 'verifikasi' ? 'bg-white/10 text-white border border-white/5' : 'text-gray-400 hover:bg-white/5 hover:text-white' ?> rounded-xl font-medium transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+        Pengajuan
       </a>
 
       <div class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-8">Sistem</div>

@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->beginTransaction();
             
             // Hapus data lama
-            $pdo->prepare("DELETE FROM freelance WHERE id_pengguna = ?")->execute([$userId]);
+            $pdo->prepare("DELETE FROM layanan WHERE id_pengguna = ?")->execute([$userId]);
             
             if (empty($jasas)) {
                 // Downgrade role jika tidak ada jasa yang dipilih
@@ -34,9 +34,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $success = 'Semua jasa telah dihapus. Profil Freelancer Anda dinonaktifkan.';
             } else {
                 // Insert data baru (satu baris per jasa yang di checked)
-                $stmt = $pdo->prepare("INSERT INTO freelance (id_pengguna, id_kategori, id_jasa, id_satuan, tarif, deskripsi) VALUES (?, ?, ?, ?, ?, ?)");
+                $stmt = $pdo->prepare("INSERT INTO layanan (id_pengguna, id_jasa, id_satuan, tarif, deskripsi) VALUES (?, ?, ?, ?, ?)");
                 foreach ($jasas as $jasa_id) {
-                    $stmt->execute([$userId, $id_kategori, (int)$jasa_id, $id_satuan ?: null, $tarif, $deskripsi]);
+                    $stmt->execute([$userId, (int)$jasa_id, $id_satuan ?: null, $tarif, $deskripsi]);
                 }
                 
                 // Upgrade role
@@ -61,7 +61,7 @@ $jasaList = $pdo->query("SELECT * FROM jasa ORDER BY nama_jasa")->fetchAll();
 $satuanList = $pdo->query("SELECT * FROM satuan ORDER BY nama_satuan")->fetchAll();
 
 // Get Current Data
-$stmtMy = $pdo->prepare("SELECT * FROM freelance WHERE id_pengguna = ?");
+$stmtMy = $pdo->prepare("SELECT l.*, j.id_kategori FROM layanan l JOIN jasa j ON l.id_jasa = j.id_jasa WHERE l.id_pengguna = ?");
 $stmtMy->execute([$userId]);
 $myFreelanceData = $stmtMy->fetchAll();
 
@@ -149,7 +149,7 @@ $isFreelancer = !empty($checkedJasa);
         <p class="text-gray-500 mt-2">Atur kategori, centang jasa yang tersedia, tetapkan harga, dan deskripsikan keahlian Anda agar dilihat oleh klien.</p>
       </div>
       <?php if ($isFreelancer): ?>
-      <a href="profil.php?id=<?= $myFreelanceData[0]['id_freelance'] ?? 0 ?>" target="_blank" class="px-5 py-2.5 bg-dark hover:bg-gray-800 text-white rounded-xl text-sm font-bold shadow-md transition-all flex items-center gap-2 flex-shrink-0">
+      <a href="profil.php?id=<?= $myFreelanceData[0]['id_layanan'] ?? 0 ?>" target="_blank" class="px-5 py-2.5 bg-dark hover:bg-gray-800 text-white rounded-xl text-sm font-bold shadow-md transition-all flex items-center gap-2 flex-shrink-0">
         Lihat Profil Publik
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
       </a>

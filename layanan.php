@@ -7,8 +7,8 @@ if (!$id_input) {
     exit;
 }
 
-// Cek apakah $id_input adalah id_freelance
-$stmtCek = $pdo->prepare("SELECT id_pengguna FROM freelance WHERE id_freelance = ?");
+// Cek apakah $id_input adalah id_layanan
+$stmtCek = $pdo->prepare("SELECT id_pengguna FROM layanan WHERE id_layanan = ?");
 $stmtCek->execute([$id_input]);
 if ($row = $stmtCek->fetch()) {
     $id_pengguna = $row['id_pengguna'];
@@ -16,16 +16,18 @@ if ($row = $stmtCek->fetch()) {
     $id_pengguna = $id_input; // asumsi itu sudah id_pengguna
 }
 
-// Fetch all freelance rows for this user to get category, baseline details, and offered jasas
+// Fetch all layanan rows for this user to get category, baseline details, and offered jasas
 $stmtData = $pdo->prepare("
-    SELECT f.*, p.nama_pengguna, p.no_telp, p.alamat_lengkap, p.email,
-           k.nama_kategori,
-           s.nama_satuan
-    FROM freelance f
-    JOIN pengguna p ON f.id_pengguna = p.id_pengguna
-    JOIN kategori k ON f.id_kategori = k.id_kategori
-    LEFT JOIN satuan s ON f.id_satuan = s.id_satuan
-    WHERE f.id_pengguna = ?
+    SELECT l.*, p.nama_pengguna, p.no_telp, p.alamat_lengkap, p.email,
+           k.nama_kategori, k.id_kategori,
+           s.nama_satuan,
+           j.nama_jasa
+    FROM layanan l
+    JOIN pengguna p ON l.id_pengguna = p.id_pengguna
+    JOIN jasa j ON l.id_jasa = j.id_jasa
+    JOIN kategori k ON j.id_kategori = k.id_kategori
+    LEFT JOIN satuan s ON l.id_satuan = s.id_satuan
+    WHERE l.id_pengguna = ?
 ");
 $stmtData->execute([$id_pengguna]);
 $freelanceRows = $stmtData->fetchAll();
@@ -41,28 +43,32 @@ $profileData = $freelanceRows[0];
 $mainKategoriId = $profileData['id_kategori'];
 
 // Filter to ONLY jasas that match this category
-$filteredJasaIds = [];
+$filteredLayananIds = [];
+$offeredJasaList = [];
 foreach ($freelanceRows as $row) {
     if ($row['id_kategori'] == $mainKategoriId) {
-        $filteredJasaIds[] = $row['id_jasa'];
+        $filteredLayananIds[] = $row['id_layanan'];
+        // Store as array of jasa options for dropdown
+        $offeredJasaList[] = [
+            'id_layanan' => $row['id_layanan'],
+            'nama_jasa' => $row['nama_jasa']
+        ];
     }
 }
-
-$offeredJasaList = [];
-if (!empty($filteredJasaIds)) {
-    $placeholders = str_repeat('?,', count($filteredJasaIds) - 1) . '?';
-    $stmtJasa = $pdo->prepare("SELECT id_jasa, nama_jasa FROM jasa WHERE id_jasa IN ($placeholders)");
-    $stmtJasa->execute($filteredJasaIds);
-    $offeredJasaList = $stmtJasa->fetchAll();
+$placeholders = '';
+if (!empty($filteredLayananIds)) {
+    $placeholders = str_repeat('?,', count($filteredLayananIds) - 1) . '?';
 }
 
-// Rating & Ulasan (Filtered to this category)
+// Rating & Ulasan (Filtered to this category via booking)
 $stmtUlasan = $pdo->prepare("
-    SELECT COUNT(id_ulasan) as total, COALESCE(AVG(rating), 0) as ulasan_avg 
-    FROM ulasan WHERE id_jasa IN (" . (!empty($filteredJasaIds) ? $placeholders : '0') . ")
+    SELECT COUNT(u.id_ulasan) as total, COALESCE(AVG(u.rating), 0) as ulasan_avg 
+    FROM ulasan u
+    JOIN booking b ON u.id_booking = b.id_booking
+    WHERE b.id_layanan IN (" . (!empty($filteredLayananIds) ? $placeholders : '0') . ")
 ");
-if (!empty($filteredJasaIds)) {
-    $stmtUlasan->execute($filteredJasaIds);
+if (!empty($filteredLayananIds)) {
+    $stmtUlasan->execute($filteredLayananIds);
 } else {
     $stmtUlasan->execute();
 }
@@ -73,20 +79,21 @@ $total_ulasan = $ulasanStat['total'] ?? 0;
 
 // Gather all reviews for the tab
 $ulasanList = [];
-if (!empty($filteredJasaIds)) {
+if (!empty($filteredLayananIds)) {
     $stmtUlasanData = $pdo->prepare("
         SELECT u.rating, u.komentar, u.tanggal_ulasan, p.nama_pengguna 
         FROM ulasan u
+        JOIN booking b ON u.id_booking = b.id_booking
         JOIN pengguna p ON u.id_pengguna = p.id_pengguna
-        WHERE u.id_jasa IN ($placeholders)
+        WHERE b.id_layanan IN ($placeholders)
         ORDER BY u.tanggal_ulasan DESC
     ");
-    $stmtUlasanData->execute($filteredJasaIds);
+    $stmtUlasanData->execute($filteredLayananIds);
     $ulasanList = $stmtUlasanData->fetchAll();
 }
 
 $loggedIn = isClientLoggedIn();
-$userNameSession = $_SESSION['user_nama'] ?? '';
+$userName = $_SESSION['user_nama'] ?? '';
 
 // Check if booking POST is sent
 $success = '';
@@ -97,16 +104,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         exit;
     }
     
-    $booking_jasa_id = (int)$_POST['id_jasa'];
+    $booking_layanan_id = (int)$_POST['id_layanan']; // from select input
     $catatan = trim($_POST['catatan']);
     $tanggal = trim($_POST['tanggal']);
     
-    if (empty($booking_jasa_id) || empty($catatan) || empty($tanggal)) {
+    if (empty($booking_layanan_id) || empty($catatan) || empty($tanggal)) {
         $error = 'Semua field wajib diisi.';
     } else {
         try {
-            $stmt = $pdo->prepare("INSERT INTO booking (id_pengguna, id_jasa, tanggal_booking, catatan, status_booking, alamat_booking) VALUES (?, ?, ?, ?, 'MENUNGGU', '-')");
-            $stmt->execute([$_SESSION['user_id'], $booking_jasa_id, $tanggal, $catatan]);
+            $stmt = $pdo->prepare("INSERT INTO booking (id_pengguna, id_layanan, tanggal_booking, catatan, status_booking, alamat_booking) VALUES (?, ?, ?, ?, 'MENUNGGU', '-')");
+            $stmt->execute([$_SESSION['user_id'], $booking_layanan_id, $tanggal, $catatan]);
             $success = 'Pemesanan berhasil! Silakan tunggu freelancer menghubungi Anda.';
         } catch (Exception $e) {
             $error = 'Gagal menyimpan pesanan. Silakan coba lagi.';
@@ -135,29 +142,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 <body class="bg-[#F8FAFC] text-gray-800 font-sans antialiased min-h-screen flex flex-col">
 
   <!-- Navbar -->
-  <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
+  <nav class="sticky top-0 z-50 glass-effect">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between h-20 items-center">
         <!-- Logo -->
         <a href="index.php" class="flex items-center gap-2 group">
-          <div class="w-10 h-10 bg-dark text-white rounded-xl flex items-center justify-center font-bold text-xl shadow-md group-hover:bg-primary transition-colors">W</div>
+          <div class="w-10 h-10 bg-dark text-white rounded-xl flex items-center justify-center font-bold text-xl group-hover:scale-105 transition-transform duration-300 shadow-md">W</div>
           <span class="text-2xl font-bold text-dark tracking-tight">Work<span class="text-accent">Lance</span></span>
         </a>
 
-        <!-- Auth Buttons -->
+        <!-- Auth Buttons / User Menu -->
         <div class="hidden md:flex items-center gap-3">
           <?php if ($loggedIn): ?>
           <?php if ($_SESSION['user_role'] == 3): ?>
-          <a href="kelola-jasa.php" class="px-5 py-2.5 text-sm font-bold text-dark hover:text-accent transition-colors border border-gray-200 hover:border-accent rounded-full bg-white hover:bg-gray-50 flex items-center gap-2">Kelola Jasa</a>
+          <a href="kelola-jasa.php" class="px-5 py-2.5 text-sm font-bold text-dark hover:text-accent transition-colors border border-gray-200 hover:border-accent rounded-full bg-white/60 hover:bg-accent/5 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            Kelola Jasa
+          </a>
           <?php else: ?>
-          <a href="mulai-freelancer.php" class="px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-accent to-orange-500 rounded-full shadow-md hover:shadow-lg transition-all flex items-center gap-2">Daftar Menjadi Freelancer</a>
+          <a href="mulai-freelancer.php" class="px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-accent to-orange-500 rounded-full shadow-md shadow-accent/20 hover:shadow-lg hover:shadow-accent/30 transition-all transform hover:-translate-y-0.5 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+            Daftar Menjadi Freelancer
+          </a>
           <?php endif; ?>
-          <a href="logout.php" class="px-4 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 rounded-full transition-colors ml-4 border border-red-100">Logout</a>
+          <div class="relative" id="userMenuWrap">
+            <button onclick="document.getElementById('userDropdown').classList.toggle('hidden')" class="flex items-center gap-3 cursor-pointer group">
+              <div class="w-10 h-10 bg-primary/20 text-primary rounded-full flex items-center justify-center font-bold relative">
+                <?= getInitials($userName) ?>
+                <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+              </div>
+              <span class="text-sm font-bold text-dark"><?= htmlspecialchars($userName) ?></span>
+              <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+            <div id="userDropdown" class="hidden absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50">
+              <a href="pengaturan-akun/informasi-akun.php" class="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 font-medium">
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                Pengaturan Akun
+              </a>
+              <div class="border-t border-gray-100 my-1"></div>
+              <a href="logout.php" class="flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 font-medium">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                Logout
+              </a>
+            </div>
+          </div>
           <?php else: ?>
-          <a href="login.php" class="px-6 py-2.5 text-sm font-bold text-gray-600 hover:text-dark transition-colors">Masuk</a>
-          <a href="register.php" class="px-7 py-2.5 text-sm font-bold text-white bg-accent rounded-full shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5">Daftar</a>
+          <a href="login.php" class="px-5 py-2.5 text-sm font-bold text-dark hover:text-accent transition-colors relative border border-transparent hover:border-gray-200 rounded-full hover:bg-white/60">Masuk</a>
+          <a href="register.php" class="px-7 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-dark to-[#1d2666] rounded-full shadow-lg shadow-dark/20 hover:shadow-xl hover:shadow-dark/30 transition-all transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-dark">Daftar</a>
           <?php endif; ?>
         </div>
+
+        <!-- Mobile Menu Toggle -->
+        <button class="md:hidden text-gray-600 hover:text-dark">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
       </div>
     </div>
   </nav>
@@ -295,10 +335,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             <div>
               <label class="block text-sm font-bold text-dark mb-2">Jenis Jasa <span class="text-red-500">*</span></label>
               <div class="relative">
-                <select name="id_jasa" required class="w-full border border-gray-200 rounded-xl pl-4 pr-10 py-3.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark appearance-none cursor-pointer">
+                <select name="id_layanan" required class="w-full border border-gray-200 rounded-xl pl-4 pr-10 py-3.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark appearance-none cursor-pointer">
                   <option value="">Pilih layanan...</option>
                   <?php foreach ($offeredJasaList as $oj): ?>
-                  <option value="<?= $oj['id_jasa'] ?>"><?= htmlspecialchars($oj['nama_jasa']) ?></option>
+                  <option value="<?= $oj['id_layanan'] ?>"><?= htmlspecialchars($oj['nama_jasa']) ?></option>
                   <?php endforeach; ?>
                 </select>
                 <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
@@ -343,6 +383,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
   </footer>
 
   <script>
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+      const wrap = document.getElementById('userMenuWrap');
+      const dd = document.getElementById('userDropdown');
+      if (wrap && dd && !wrap.contains(e.target)) {
+        dd.classList.add('hidden');
+      }
+    });
+
     function switchTab(tabId) {
       if (tabId === 'deskripsi') {
         document.getElementById('tabDeskripsi').classList.remove('hidden');

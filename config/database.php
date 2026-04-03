@@ -27,6 +27,19 @@ function requireClientLogin() {
     }
 }
 
+// Cek apakah admin sudah login
+function isAdminLoggedIn() {
+    return isset($_SESSION['admin_id']);
+}
+
+// Redirect ke login jika belum login
+function requireAdminLogin() {
+    if (!isAdminLoggedIn()) {
+        header('Location: login.php');
+        exit;
+    }
+}
+
 // Format tanggal Indonesia
 function formatTanggal($tanggal) {
     $bulan = [

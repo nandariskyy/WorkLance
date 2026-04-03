@@ -13,21 +13,22 @@ foreach ($jasaList as $j) {
 
 // Freelancer Unggulan (LIMIT 4, with avg rating)
 $freelancerUnggulan = $pdo->query("
-    SELECT f.id_freelance, f.tarif, f.deskripsi,
-           p.nama_pengguna, p.alamat_lengkap,
+    SELECT l.id_layanan, l.tarif, l.deskripsi,
+           p.id_pengguna, p.nama_pengguna, p.alamat_lengkap,
            k.nama_kategori,
            j.nama_jasa,
            s.nama_satuan,
            COALESCE(AVG(u.rating), 0) AS avg_rating,
            COUNT(u.id_ulasan) AS total_ulasan
-    FROM freelance f
-    JOIN pengguna p ON f.id_pengguna = p.id_pengguna
-    JOIN kategori k ON f.id_kategori = k.id_kategori
-    JOIN jasa j ON f.id_jasa = j.id_jasa
-    LEFT JOIN satuan s ON f.id_satuan = s.id_satuan
-    LEFT JOIN ulasan u ON u.id_jasa = f.id_jasa
-    GROUP BY f.id_freelance
-    ORDER BY avg_rating DESC, f.id_freelance ASC
+    FROM layanan l
+    JOIN pengguna p ON l.id_pengguna = p.id_pengguna
+    JOIN jasa j ON l.id_jasa = j.id_jasa
+    JOIN kategori k ON j.id_kategori = k.id_kategori
+    LEFT JOIN satuan s ON l.id_satuan = s.id_satuan
+    LEFT JOIN booking b ON b.id_layanan = l.id_layanan
+    LEFT JOIN ulasan u ON u.id_booking = b.id_booking
+    GROUP BY l.id_layanan
+    ORDER BY avg_rating DESC, l.id_layanan ASC
     LIMIT 4
 ")->fetchAll();
 
@@ -36,17 +37,18 @@ $search = trim($_GET['search'] ?? '');
 $hasilCari = [];
 if ($search !== '') {
     $stmt = $pdo->prepare("
-        SELECT f.id_freelance, f.tarif,
-               p.nama_pengguna, p.alamat_lengkap,
+        SELECT l.id_layanan, l.tarif,
+               p.id_pengguna, p.nama_pengguna, p.alamat_lengkap,
                k.nama_kategori, j.nama_jasa,
                COALESCE(AVG(u.rating), 0) AS avg_rating
-        FROM freelance f
-        JOIN pengguna p ON f.id_pengguna = p.id_pengguna
-        JOIN kategori k ON f.id_kategori = k.id_kategori
-        JOIN jasa j ON f.id_jasa = j.id_jasa
-        LEFT JOIN ulasan u ON u.id_jasa = f.id_jasa
+        FROM layanan l
+        JOIN pengguna p ON l.id_pengguna = p.id_pengguna
+        JOIN jasa j ON l.id_jasa = j.id_jasa
+        JOIN kategori k ON j.id_kategori = k.id_kategori
+        LEFT JOIN booking b ON b.id_layanan = l.id_layanan
+        LEFT JOIN ulasan u ON u.id_booking = b.id_booking
         WHERE p.nama_pengguna LIKE ? OR j.nama_jasa LIKE ? OR k.nama_kategori LIKE ?
-        GROUP BY f.id_freelance
+        GROUP BY l.id_layanan
         ORDER BY avg_rating DESC
     ");
     $stmt->execute(["%$search%", "%$search%", "%$search%"]);
@@ -201,7 +203,7 @@ $userName = $_SESSION['user_nama'] ?? '';
                 <?= htmlspecialchars($fl['alamat_lengkap'] ?? '-') ?>
               </div>
             </div>
-            <a href="profil.php?id=<?= $fl['id_freelance'] ?>" class="block text-center w-full bg-gray-50 border border-gray-200 text-dark group-hover:bg-dark group-hover:text-white group-hover:border-dark py-3 rounded-xl transition-all duration-300 font-semibold mt-auto">Lihat Profil</a>
+            <a href="layanan.php?id=<?= $fl['id_layanan'] ?>" class="block text-center w-full bg-gray-50 border border-gray-200 text-dark group-hover:bg-dark group-hover:text-white group-hover:border-dark py-3 rounded-xl transition-all duration-300 font-semibold mt-auto">Lihat Profil</a>
           </div>
         </div>
         <?php endforeach; ?>
@@ -337,13 +339,13 @@ $userName = $_SESSION['user_nama'] ?? '';
             </div>
             <div class="text-center flex-grow">
               <h3 class="text-xl font-bold text-dark mb-1"><?= htmlspecialchars($fl['nama_pengguna']) ?></h3>
-              <p class="text-accent font-medium text-sm mb-4"><?= htmlspecialchars($fl['nama_jasa']) ?></p>
+              <p class="text-accent font-medium text-sm mb-4"><?= htmlspecialchars($fl['nama_kategori']) ?></p>
               <div class="flex items-center justify-center text-gray-500 text-sm mb-6 bg-gray-50 py-1.5 px-3 rounded-full w-max mx-auto">
                 <svg class="w-4 h-4 mr-1.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                 <?= htmlspecialchars($fl['alamat_lengkap'] ?: '-') ?>
               </div>
             </div>
-            <a href="profil.php?id=<?= $fl['id_freelance'] ?>" class="block text-center w-full bg-gray-50 border border-gray-200 text-dark group-hover:bg-dark group-hover:text-white group-hover:border-dark py-3 rounded-xl transition-all duration-300 font-semibold mt-auto">Lihat Profil</a>
+            <a href="layanan.php?id=<?= $fl['id_layanan'] ?>" class="block text-center w-full bg-gray-50 border border-gray-200 text-dark group-hover:bg-dark group-hover:text-white group-hover:border-dark py-3 rounded-xl transition-all duration-300 font-semibold mt-auto">Lihat Profil</a>
           </div>
         </div>
         <?php endforeach; ?>

@@ -1,6 +1,6 @@
 <?php
-require_once 'config/database.php';
-requireLogin();
+require_once __DIR__ . '/../config/database.php';
+requireAdminLogin();
 
 $currentPage = 'freelancer';
 $adminNama = $_SESSION['admin_nama'] ?? 'Admin';
@@ -12,31 +12,30 @@ $error = '';
 // HAPUS FREELANCER
 if (isset($_GET['hapus'])) {
     $id = (int)$_GET['hapus'];
-    $stmt = $pdo->prepare("DELETE FROM freelance WHERE id_freelance = ?");
+    $stmt = $pdo->prepare("DELETE FROM layanan WHERE id_layanan = ?");
     $stmt->execute([$id]);
     $success = 'Data freelancer berhasil dihapus.';
 }
 
 // TAMBAH / EDIT FREELANCER
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $id_freelance = $_POST['id_freelance'] ?? '';
+    $id_layanan = $_POST['id_layanan'] ?? '';
     $id_pengguna = (int)($_POST['id_pengguna'] ?? 0);
-    $id_kategori = (int)($_POST['id_kategori'] ?? 0);
     $id_jasa = (int)($_POST['id_jasa'] ?? 0);
     $id_satuan = (int)($_POST['id_satuan'] ?? 0);
     $tarif = trim($_POST['tarif'] ?? '');
     $deskripsi = trim($_POST['deskripsi'] ?? '');
 
-    if (!$id_pengguna || !$id_kategori || !$id_jasa) {
-        $error = 'Pengguna, kategori, dan jasa wajib dipilih.';
+    if (!$id_pengguna || !$id_jasa) {
+        $error = 'Pengguna dan jasa wajib dipilih.';
     } else {
-        if ($id_freelance) {
-            $stmt = $pdo->prepare("UPDATE freelance SET id_pengguna=?, id_kategori=?, id_jasa=?, id_satuan=?, tarif=?, deskripsi=? WHERE id_freelance=?");
-            $stmt->execute([$id_pengguna, $id_kategori, $id_jasa, $id_satuan ?: null, $tarif, $deskripsi, $id_freelance]);
+        if ($id_layanan) {
+            $stmt = $pdo->prepare("UPDATE layanan SET id_pengguna=?, id_jasa=?, id_satuan=?, tarif=?, deskripsi=? WHERE id_layanan=?");
+            $stmt->execute([$id_pengguna, $id_jasa, $id_satuan ?: null, $tarif, $deskripsi, $id_layanan]);
             $success = 'Data freelancer berhasil diperbarui.';
         } else {
-            $stmt = $pdo->prepare("INSERT INTO freelance (id_pengguna, id_kategori, id_jasa, id_satuan, tarif, deskripsi) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$id_pengguna, $id_kategori, $id_jasa, $id_satuan ?: null, $tarif, $deskripsi]);
+            $stmt = $pdo->prepare("INSERT INTO layanan (id_pengguna, id_jasa, id_satuan, tarif, deskripsi) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([$id_pengguna, $id_jasa, $id_satuan ?: null, $tarif, $deskripsi]);
             $success = 'Data freelancer berhasil ditambahkan.';
         }
     }
@@ -45,7 +44,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // AMBIL DATA EDIT
 $editData = null;
 if (isset($_GET['edit'])) {
-    $stmt = $pdo->prepare("SELECT * FROM freelance WHERE id_freelance = ?");
+    $stmt = $pdo->prepare("
+        SELECT l.*, j.id_kategori 
+        FROM layanan l 
+        JOIN jasa j ON l.id_jasa = j.id_jasa 
+        WHERE l.id_layanan = ?
+    ");
     $stmt->execute([(int)$_GET['edit']]);
     $editData = $stmt->fetch();
 }
@@ -62,19 +66,19 @@ if ($search !== '') {
     $params[] = "%$search%";
 }
 if ($filterKategori !== '') {
-    $where .= " AND f.id_kategori = ?";
+    $where .= " AND j.id_kategori = ?";
     $params[] = (int)$filterKategori;
 }
 
 $stmt = $pdo->prepare("
-    SELECT f.*, p.nama_pengguna, p.email, p.no_telp, k.nama_kategori, j.nama_jasa, s.nama_satuan
-    FROM freelance f
-    LEFT JOIN pengguna p ON f.id_pengguna = p.id_pengguna
-    LEFT JOIN kategori k ON f.id_kategori = k.id_kategori
-    LEFT JOIN jasa j ON f.id_jasa = j.id_jasa
-    LEFT JOIN satuan s ON f.id_satuan = s.id_satuan
+    SELECT l.*, p.nama_pengguna, p.email, p.no_telp, k.nama_kategori, j.nama_jasa, s.nama_satuan
+    FROM layanan l
+    LEFT JOIN pengguna p ON l.id_pengguna = p.id_pengguna
+    LEFT JOIN jasa j ON l.id_jasa = j.id_jasa
+    LEFT JOIN kategori k ON j.id_kategori = k.id_kategori
+    LEFT JOIN satuan s ON l.id_satuan = s.id_satuan
     WHERE $where
-    ORDER BY f.id_freelance DESC
+    ORDER BY l.id_layanan DESC
 ");
 $stmt->execute($params);
 $freelancerList = $stmt->fetchAll();
@@ -131,6 +135,10 @@ $satuanList = $pdo->query("SELECT * FROM satuan ORDER BY nama_satuan")->fetchAll
       <a href="booking.php" class="flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-white/5 hover:text-white rounded-xl font-medium transition-colors">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
         Booking
+      </a>
+      <a href="verifikasi.php" class="flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-white/5 hover:text-white rounded-xl font-medium transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+        Pengajuan
       </a>
       <div class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-8">Sistem</div>
       <a href="kelola.php" class="flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-white/5 hover:text-white rounded-xl font-medium transition-colors">
@@ -227,7 +235,7 @@ $satuanList = $pdo->query("SELECT * FROM satuan ORDER BY nama_satuan")->fetchAll
               <?php else: ?>
               <?php foreach ($freelancerList as $fl): ?>
               <tr class="hover:bg-gray-50/50 transition-colors">
-                <td class="p-4 pl-6 text-sm text-gray-500"><?= $fl['id_freelance'] ?></td>
+                <td class="p-4 pl-6 text-sm text-gray-500"><?= $fl['id_layanan'] ?></td>
                 <td class="p-4">
                   <div class="flex items-center gap-3">
                     <div class="w-9 h-9 rounded-full bg-accent/10 text-accent flex items-center justify-center font-bold text-xs"><?= getInitials($fl['nama_pengguna'] ?? 'N/A') ?></div>
@@ -245,10 +253,10 @@ $satuanList = $pdo->query("SELECT * FROM satuan ORDER BY nama_satuan")->fetchAll
                 <td class="p-4 text-sm text-gray-500"><?= htmlspecialchars($fl['nama_satuan'] ?? '-') ?></td>
                 <td class="p-4 pr-6 text-right">
                   <div class="flex items-center justify-end gap-2">
-                    <a href="freelancer.php?edit=<?= $fl['id_freelance'] ?>" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
+                    <a href="freelancer.php?edit=<?= $fl['id_layanan'] ?>" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                     </a>
-                    <a href="freelancer.php?hapus=<?= $fl['id_freelance'] ?>" onclick="return confirm('Yakin ingin menghapus freelancer ini?')" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
+                    <a href="freelancer.php?hapus=<?= $fl['id_layanan'] ?>" onclick="return confirm('Yakin ingin menghapus layanan ini?')" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </a>
                   </div>
@@ -274,7 +282,7 @@ $satuanList = $pdo->query("SELECT * FROM satuan ORDER BY nama_satuan")->fetchAll
         </a>
       </div>
       <form method="POST" action="freelancer.php" class="p-6 space-y-4">
-        <input type="hidden" name="id_freelance" value="<?= $editData['id_freelance'] ?? '' ?>">
+        <input type="hidden" name="id_layanan" value="<?= $editData['id_layanan'] ?? '' ?>">
 
         <div>
           <label class="block text-sm font-bold text-dark mb-1.5">Pengguna (Role Freelancer) <span class="text-red-500">*</span></label>

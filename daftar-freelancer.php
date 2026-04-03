@@ -12,15 +12,70 @@ if ($userRole == 3) {
     exit;
 }
 
+// Cek apakah sudah pernah mengajukan dan masih menunggu
+$stmtCek = $pdo->prepare("SELECT status, catatan_admin FROM pengajuan_freelancer WHERE id_pengguna = ? ORDER BY tanggal_pengajuan DESC LIMIT 1");
+$stmtCek->execute([$userId]);
+$cekPengajuan = $stmtCek->fetch();
+
+$infoMsg = null;
+if ($cekPengajuan && $cekPengajuan['status'] == 'MENUNGGU') {
+    $infoMsg = "Anda sudah memiliki pengajuan yang sedang diproses. Harap tunggu konfirmasi admin.";
+} elseif ($cekPengajuan && $cekPengajuan['status'] == 'DITERIMA') {
+    $_SESSION['user_role'] = 3;
+    header('Location: kelola-jasa.php');
+    exit;
+}
+
+$errorMsg = '';
+$successMsg = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$infoMsg) {
+    $nik = trim($_POST['nik'] ?? '');
+    $deskripsi = trim($_POST['deskripsi'] ?? '');
+    
+    $id_provinsi = (int)($_POST['id_provinsi'] ?? 0) ?: null;
+    $id_kabupaten = (int)($_POST['id_kabupaten'] ?? 0) ?: null;
+    $id_kecamatan = (int)($_POST['id_kecamatan'] ?? 0) ?: null;
+    $id_desa = (int)($_POST['id_desa'] ?? 0) ?: null;
+    $alamat_lengkap = trim($_POST['alamat_lengkap'] ?? '');
+    
+    if (empty($nik) || empty($deskripsi) || empty($alamat_lengkap) || !$id_provinsi || !$id_kabupaten || !$id_kecamatan || !$id_desa) {
+        $errorMsg = "Pendaftaran gagal! Kolom alamat, NIK, dan Deskripsi wajib diisi.";
+    } elseif (!isset($_POST['agree'])) {
+        $errorMsg = "Anda harus menyetujui syarat & ketentuan.";
+    } else {
+        try {
+            $pdo->beginTransaction();
+            // Update alamat di tabel pengguna
+            $stmtUpdate = $pdo->prepare("UPDATE pengguna SET id_provinsi=?, id_kabupaten=?, id_kecamatan=?, id_desa=?, alamat_lengkap=? WHERE id_pengguna=?");
+            $stmtUpdate->execute([$id_provinsi, $id_kabupaten, $id_kecamatan, $id_desa, $alamat_lengkap, $userId]);
+            
+            // Simpan pengajuan
+            $stmt = $pdo->prepare("INSERT INTO pengajuan_freelancer (id_pengguna, nik, deskripsi, status) VALUES (?, ?, ?, 'MENUNGGU')");
+            $stmt->execute([$userId, $nik, $deskripsi]);
+            $pdo->commit();
+            
+            $successMsg = "Pengajuan dan pembaruan profil berhasil disimpan! Silakan tunggu admin memverifikasi pengajuan Anda.";
+            $infoMsg = "Anda sudah memiliki pengajuan yang sedang diproses. Harap tunggu konfirmasi admin."; // Stop further submitting
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            $errorMsg = "Terjadi kesalahan saat memproses data. Silakan coba lagi.";
+        }
+    }
+}
+
 // Load user data for pre-fill
 $stmt = $pdo->prepare("SELECT * FROM pengguna WHERE id_pengguna = ?");
 $stmt->execute([$userId]);
 $user = $stmt->fetch();
 
-// Data dropdown
-$kategoriList = $pdo->query("SELECT * FROM kategori ORDER BY nama_kategori")->fetchAll();
-$jasaList = $pdo->query("SELECT * FROM jasa ORDER BY nama_jasa")->fetchAll();
-$satuanList = $pdo->query("SELECT * FROM satuan ORDER BY nama_satuan")->fetchAll();
+// Load lokasi
+$provinsiList = $pdo->query("SELECT * FROM provinsi ORDER BY nama_provinsi")->fetchAll();
+$kabupatenList = $pdo->query("SELECT * FROM kabupaten ORDER BY nama_kabupaten")->fetchAll();
+$kecamatanList = $pdo->query("SELECT * FROM kecamatan ORDER BY nama_kecamatan")->fetchAll();
+$desaList = $pdo->query("SELECT * FROM desa ORDER BY nama_desa")->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -28,7 +83,7 @@ $satuanList = $pdo->query("SELECT * FROM satuan ORDER BY nama_satuan")->fetchAll
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pendaftaran Freelancer | WorkLance</title>
-  <meta name="description" content="Daftar sebagai freelancer di WorkLance. Isi data diri dan mulai tawarkan jasamu." />
+  <meta name="description" content="Daftar sebagai freelancer di WorkLance. Lengkapi data dirimu dan ajukan pendaftaran." />
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style type="text/tailwindcss">
@@ -62,43 +117,57 @@ $satuanList = $pdo->query("SELECT * FROM satuan ORDER BY nama_satuan")->fetchAll
     </div>
   </nav>
 
-  <!-- Progress Bar -->
-  <div class="bg-white border-b border-gray-100">
-    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-      <div class="flex items-center gap-4 text-sm font-medium">
-        <div class="flex items-center gap-2 text-accent">
-          <div class="w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center font-bold text-xs">1</div>
-          <span class="hidden sm:inline">Data Diri</span>
-        </div>
-        <div class="flex-1 h-0.5 bg-gray-200 rounded"></div>
-        <div class="flex items-center gap-2 text-gray-400">
-          <div class="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center font-bold text-xs">2</div>
-          <span class="hidden sm:inline">Keahlian & Jasa</span>
-        </div>
-        <div class="flex-1 h-0.5 bg-gray-200 rounded"></div>
-        <div class="flex items-center gap-2 text-gray-400">
-          <div class="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center font-bold text-xs">3</div>
-          <span class="hidden sm:inline">Verifikasi</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- Form -->
   <main class="flex-grow py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-3xl mx-auto">
+      
+      <?php if ($successMsg): ?>
+      <div class="mb-6 bg-green-50 text-green-700 p-4 rounded-xl border border-green-200 flex items-start gap-3">
+        <svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <p class="font-medium whitespace-pre-line"><?= htmlspecialchars($successMsg) ?></p>
+      </div>
+      <?php endif; ?>
+
+      <?php if ($errorMsg): ?>
+      <div class="mb-6 bg-red-50 text-red-700 p-4 rounded-xl border border-red-200 flex items-start gap-3">
+        <svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <p class="font-medium"><?= htmlspecialchars($errorMsg) ?></p>
+      </div>
+      <?php endif; ?>
+
+      <?php if ($cekPengajuan && $cekPengajuan['status'] == 'DITOLAK' && !$successMsg): ?>
+      <div class="mb-6 bg-red-50 text-red-700 p-4 rounded-xl border border-red-200 flex items-start gap-3">
+        <svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <div>
+          <p class="font-bold">Pengajuan Sebelumnya Ditolak</p>
+          <p class="text-sm mt-1">Alasan: <?= htmlspecialchars($cekPengajuan['catatan_admin'] ?: 'Tidak ada alasan spesifik.') ?></p>
+          <p class="text-sm mt-2">Anda dapat memperbaiki data dan mengajukan ulang formulir di bawah ini.</p>
+        </div>
+      </div>
+      <?php endif; ?>
+
       <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         <!-- Header -->
         <div class="bg-dark p-8 md:p-10 text-white relative overflow-hidden">
           <div class="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
           <div class="absolute bottom-0 left-0 w-48 h-48 bg-accent/15 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3"></div>
           <div class="relative z-10">
-            <h1 class="text-3xl font-bold mb-2">Pendaftaran Freelancer</h1>
-            <p class="text-gray-300">Setiap keahlian layak diapresiasi. Beritahu kami siapa Anda dan apa spesialisasi Anda.</p>
+            <h1 class="text-3xl font-bold mb-2">Form Pengajuan Freelancer</h1>
+            <p class="text-gray-300">Bergabunglah dan mulai tawarkan keahlian Anda kepada klien di sekitar Anda.</p>
           </div>
         </div>
 
-        <form class="p-8 md:p-10 space-y-8" id="formDaftarFreelancer">
+        <?php if ($infoMsg && !$successMsg): ?>
+        <div class="p-10 text-center">
+            <div class="w-20 h-20 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <h2 class="text-2xl font-bold text-dark mb-2">Pengajuan Sedang Diproses</h2>
+            <p class="text-gray-500 mb-6"><?= htmlspecialchars($infoMsg) ?></p>
+            <a href="index.php" class="inline-block bg-gray-100 hover:bg-gray-200 text-dark font-bold py-3 px-6 rounded-xl transition-colors">Kembali ke Beranda</a>
+        </div>
+        <?php else: ?>
+        <form method="POST" action="" class="p-8 md:p-10 space-y-8">
 
           <!-- Section 1: Identitas Diri -->
           <div>
@@ -106,158 +175,141 @@ $satuanList = $pdo->query("SELECT * FROM satuan ORDER BY nama_satuan")->fetchAll
               <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
               Identitas Diri
             </h2>
-            <p class="text-sm text-gray-500 mb-5">Informasi dasar tentang diri Anda.</p>
+            <p class="text-sm text-gray-500 mb-5">Informasi dasar akun Anda. (Dapat diubah di Pengaturan Akun)</p>
             <div class="grid md:grid-cols-2 gap-6">
               <div>
-                <label class="block text-sm font-bold text-dark mb-2">Nama Lengkap <span class="text-red-500">*</span></label>
-                <input type="text" value="<?= htmlspecialchars($user['nama_pengguna'] ?? '') ?>" class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark" readonly>
+                <label class="block text-sm font-bold text-dark mb-2">Nama Lengkap</label>
+                <input type="text" value="<?= htmlspecialchars($user['nama_pengguna'] ?? '') ?>" class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-100 focus:outline-none text-sm font-medium text-gray-500 cursor-not-allowed" readonly>
               </div>
               <div>
-                <label class="block text-sm font-bold text-dark mb-2">Email <span class="text-red-500">*</span></label>
-                <input type="email" value="<?= htmlspecialchars($user['email'] ?? '') ?>" class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark" readonly>
+                <label class="block text-sm font-bold text-dark mb-2">Email</label>
+                <input type="email" value="<?= htmlspecialchars($user['email'] ?? '') ?>" class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-100 focus:outline-none text-sm font-medium text-gray-500 cursor-not-allowed" readonly>
               </div>
               <div>
-                <label class="block text-sm font-bold text-dark mb-2">No. Telepon / WhatsApp <span class="text-red-500">*</span></label>
-                <input type="tel" name="no_telp" value="<?= htmlspecialchars($user['no_telp'] ?? '') ?>" placeholder="0812xxxxxxxx" required class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark">
+                <label class="block text-sm font-bold text-dark mb-2">Provinsi <span class="text-red-500">*</span></label>
+                <select name="id_provinsi" id="selProvinsi" required class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark cursor-pointer">
+                  <option value="">-- Pilih --</option>
+                  <?php foreach ($provinsiList as $p): ?>
+                  <option value="<?= $p['id_provinsi'] ?>" <?= $user['id_provinsi'] == $p['id_provinsi'] ? 'selected' : '' ?>><?= htmlspecialchars($p['nama_provinsi']) ?></option>
+                  <?php endforeach; ?>
+                </select>
               </div>
               <div>
-                <label class="block text-sm font-bold text-dark mb-2">Tanggal Lahir</label>
-                <input type="date" name="tanggal_lahir" value="<?= $user['tanggal_lahir'] ?? '' ?>" class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark">
+                <label class="block text-sm font-bold text-dark mb-2">Kabupaten/Kota <span class="text-red-500">*</span></label>
+                <select name="id_kabupaten" id="selKabupaten" required class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark cursor-pointer">
+                  <option value="">-- Pilih --</option>
+                  <?php foreach ($kabupatenList as $k): ?>
+                  <option value="<?= $k['id_kabupaten'] ?>" data-prov="<?= $k['id_provinsi'] ?>" <?= $user['id_kabupaten'] == $k['id_kabupaten'] ? 'selected' : '' ?>><?= htmlspecialchars($k['nama_kabupaten']) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-bold text-dark mb-2">Kecamatan <span class="text-red-500">*</span></label>
+                <select name="id_kecamatan" id="selKecamatan" required class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark cursor-pointer">
+                  <option value="">-- Pilih --</option>
+                  <?php foreach ($kecamatanList as $kc): ?>
+                  <option value="<?= $kc['id_kecamatan'] ?>" data-kab="<?= $kc['id_kabupaten'] ?>" <?= $user['id_kecamatan'] == $kc['id_kecamatan'] ? 'selected' : '' ?>><?= htmlspecialchars($kc['nama_kecamatan']) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-bold text-dark mb-2">Desa/Kelurahan <span class="text-red-500">*</span></label>
+                <select name="id_desa" id="selDesa" required class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark cursor-pointer">
+                  <option value="">-- Pilih --</option>
+                  <?php foreach ($desaList as $d): ?>
+                  <option value="<?= $d['id_desa'] ?>" data-kec="<?= $d['id_kecamatan'] ?>" <?= $user['id_desa'] == $d['id_desa'] ? 'selected' : '' ?>><?= htmlspecialchars($d['nama_desa']) ?></option>
+                  <?php endforeach; ?>
+                </select>
               </div>
               <div class="md:col-span-2">
                 <label class="block text-sm font-bold text-dark mb-2">Alamat Lengkap <span class="text-red-500">*</span></label>
-                <textarea name="alamat_lengkap" rows="2" placeholder="Alamat domisili Anda saat ini..." required class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark resize-none"><?= htmlspecialchars($user['alamat_lengkap'] ?? '') ?></textarea>
+                <textarea name="alamat_lengkap" rows="2" required class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark resize-none cursor-text"><?= htmlspecialchars($user['alamat_lengkap'] ?? '') ?></textarea>
               </div>
             </div>
           </div>
 
           <hr class="border-gray-100">
 
-          <!-- Section 2: Keahlian & Layanan -->
+          <!-- Section 2: Data Pengajuan -->
           <div>
             <h2 class="text-xl font-bold text-dark mb-1 flex items-center gap-2">
-              <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-              Keahlian & Layanan
+              <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+              Data Pengajuan
             </h2>
-            <p class="text-sm text-gray-500 mb-5">Pilih kategori dan jasa yang ingin Anda tawarkan.</p>
-            <div class="grid md:grid-cols-2 gap-6">
-              <div>
-                <label class="block text-sm font-bold text-dark mb-2">Kategori Utama <span class="text-red-500">*</span></label>
-                <select name="id_kategori" id="selectKategori" required class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark">
-                  <option value="">-- Pilih Kategori --</option>
-                  <?php foreach ($kategoriList as $kat): ?>
-                  <option value="<?= $kat['id_kategori'] ?>"><?= htmlspecialchars($kat['nama_kategori']) ?></option>
-                  <?php endforeach; ?>
-                </select>
-              </div>
-              <div>
-                <label class="block text-sm font-bold text-dark mb-2">Jasa / Profesi <span class="text-red-500">*</span></label>
-                <select name="id_jasa" id="selectJasa" required class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark">
-                  <option value="">-- Pilih Jasa --</option>
-                  <?php foreach ($jasaList as $js): ?>
-                  <option value="<?= $js['id_jasa'] ?>" data-kategori="<?= $js['id_kategori'] ?>"><?= htmlspecialchars($js['nama_jasa']) ?></option>
-                  <?php endforeach; ?>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <hr class="border-gray-100">
-
-          <!-- Section 3: Deskripsi & Tarif -->
-          <div>
-            <h2 class="text-xl font-bold text-dark mb-1 flex items-center gap-2">
-              <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-              Deskripsi & Tarif
-            </h2>
-            <p class="text-sm text-gray-500 mb-5">Tentukan harga dan deskripsikan keahlian Anda.</p>
+            <p class="text-sm text-gray-500 mb-5">Lengkapi data tambahan untuk verifikasi keamanan dan keahlian Anda.</p>
             <div class="space-y-6">
               <div>
-                <label class="block text-sm font-bold text-dark mb-2">Tarif Dasar / Mulai Dari <span class="text-red-500">*</span></label>
-                <div class="flex">
-                  <span class="inline-flex items-center px-4 rounded-l-xl border border-r-0 border-gray-200 bg-gray-100 text-gray-500 font-bold text-sm">Rp</span>
-                  <input type="number" name="tarif" placeholder="150000" required class="w-full border border-gray-200 px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark">
-                  <span class="inline-flex items-center px-3 border border-l-0 border-r-0 border-gray-200 bg-gray-100 text-gray-400 text-sm">/</span>
-                  <select name="id_satuan" class="rounded-r-xl border border-gray-200 px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark min-w-[120px]">
-                    <option value="">Satuan</option>
-                    <?php foreach ($satuanList as $st): ?>
-                    <option value="<?= $st['id_satuan'] ?>"><?= htmlspecialchars($st['nama_satuan']) ?></option>
-                    <?php endforeach; ?>
-                  </select>
-                </div>
+                <label class="block text-sm font-bold text-dark mb-2">Nomor Induk Kependudukan (NIK) <span class="text-red-500">*</span></label>
+                <input type="text" name="nik" placeholder="Ketik 16 digit NIK Anda..." required maxlength="16" class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark">
+                <p class="text-xs text-gray-400 mt-1">Hanya digunakan untuk verifikasi identitas internal.</p>
               </div>
+              
               <div>
-                <label class="block text-sm font-bold text-dark mb-2">Deskripsi Singkat Keahlian</label>
-                <textarea name="deskripsi" rows="4" placeholder="Ceritakan singkat tentang pengalaman, metode kerja, atau kelebihan layanan Anda dari yang lain..." class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark resize-none"></textarea>
-              </div>
-            </div>
-          </div>
-
-          <hr class="border-gray-100">
-
-          <!-- Section 4: Verifikasi Dokumen -->
-          <div class="pb-4">
-            <h2 class="text-xl font-bold text-dark mb-1 flex items-center gap-2">
-              <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-              Verifikasi Dokumen
-            </h2>
-            <p class="text-sm text-gray-500 mb-5">Unggah dokumen untuk verifikasi identitas Anda.</p>
-            <div class="grid md:grid-cols-2 gap-6">
-              <div class="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer group">
-                <svg class="w-10 h-10 mx-auto text-gray-400 mb-3 group-hover:text-accent transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                <p class="text-dark font-bold text-sm">Foto KTP</p>
-                <p class="text-gray-500 text-xs mt-1">Maks 5MB (JPG, PNG)</p>
-              </div>
-              <div class="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer group">
-                <svg class="w-10 h-10 mx-auto text-gray-400 mb-3 group-hover:text-accent transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                <p class="text-dark font-bold text-sm">Foto Portofolio <span class="text-gray-400 font-normal">(Opsional)</span></p>
-                <p class="text-gray-500 text-xs mt-1">Maks 5MB (JPG, PNG, PDF)</p>
+                <label class="block text-sm font-bold text-dark mb-2">Deskripsi Diri & Keahlian <span class="text-red-500">*</span></label>
+                <textarea name="deskripsi" rows="5" placeholder="Ceritakan riwayat pendidikan, pengalaman kerja, alur kerja, hingga pencapaian relevan yang membuat Anda layak menjadi freelancer di platform ini..." required class="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark resize-none"></textarea>
               </div>
             </div>
           </div>
 
           <!-- Agreement -->
           <div class="flex items-start gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
-            <input type="checkbox" id="agree" required class="mt-1 w-4 h-4 accent-accent">
-            <label for="agree" class="text-sm text-gray-600">
-              Dengan mendaftar, saya menyetujui <a href="#" class="text-accent font-bold hover:underline">Syarat & Ketentuan</a> serta <a href="#" class="text-accent font-bold hover:underline">Kebijakan Privasi</a> WorkLance. Data yang saya berikan adalah benar dan dapat dipertanggungjawabkan.
+            <input type="checkbox" id="agree" name="agree" required class="mt-1 w-4 h-4 accent-accent cursor-pointer">
+            <label for="agree" class="text-sm text-gray-600 cursor-pointer">
+              Dengan mengajukan permohonan ini, saya menyatakan bahwa data yang saya berikan adalah benar. Saya menyetujui <a href="#" class="text-accent font-bold hover:underline">Syarat & Ketentuan</a> untuk menjadi freelancer dan siap menjaga nama baik platform.
             </label>
           </div>
 
           <!-- Action Buttons -->
           <div class="pt-4 flex flex-col sm:flex-row items-center gap-4">
-            <a href="mulai-freelancer.php" class="px-8 py-3.5 text-gray-600 font-bold hover:text-dark transition-colors text-center">Kembali</a>
+            <a href="mulai-freelancer.php" class="px-8 py-3.5 text-gray-600 font-bold hover:text-dark transition-colors text-center w-full sm:w-auto">Kembali</a>
             <button type="submit" class="flex-1 w-full sm:w-auto bg-accent hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl shadow-[0_8px_20px_-6px_rgba(193,87,42,0.5)] hover:shadow-xl transition-all transform hover:-translate-y-0.5 text-lg cursor-pointer">
-              Daftar Sebagai Freelancer
+              Kirim Pengajuan
             </button>
           </div>
         </form>
+        <?php endif; ?>
       </div>
 
-      <!-- Info Note -->
-      <div class="mt-6 flex items-start gap-3 p-4 bg-blue-50 rounded-xl border border-blue-100 text-sm">
-        <svg class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        <p class="text-blue-700">Setelah mendaftar, profil Anda akan langsung aktif dan dapat ditemukan oleh calon klien di WorkLance. Anda dapat menambahkan atau mengelola jasa tambahan kapan saja melalui menu <strong>Kelola Jasa</strong>.</p>
-      </div>
     </div>
   </main>
 
   <script>
-    // Cascade kategori -> jasa
-    document.getElementById('selectKategori').addEventListener('change', function() {
-      const katId = this.value;
-      const jasaSel = document.getElementById('selectJasa');
-      jasaSel.value = '';
-      jasaSel.querySelectorAll('option[data-kategori]').forEach(opt => {
-        opt.style.display = (!katId || opt.dataset.kategori === katId) ? '' : 'none';
+    // JS Filtering Cascade
+    function cascadeFilter(parentSel, childSel, dataAttr) {
+      const parentEl = document.getElementById(parentSel);
+      if (!parentEl) return;
+      parentEl.addEventListener('change', function() {
+        const val = this.value;
+        const child = document.getElementById(childSel);
+        if (!child) return;
+        child.value = '';
+        child.querySelectorAll('option[' + dataAttr + ']').forEach(opt => {
+          opt.style.display = (!val || opt.getAttribute(dataAttr) === val) ? '' : 'none';
+        });
+        child.dispatchEvent(new Event('change'));
       });
-    });
+    }
 
-    // Frontend-only submit handler (placeholder)
-    document.getElementById('formDaftarFreelancer').addEventListener('submit', function(e) {
-      e.preventDefault();
-      alert('Fitur pendaftaran freelancer akan segera diproses. Halaman ini saat ini hanya frontend.');
-    });
+    // Initialize display states correctly without overwriting values
+    function initCascadeFilters() {
+      const sels = [
+        { c: 'selKabupaten', pId: document.getElementById('selProvinsi')?.value, attr: 'data-prov' },
+        { c: 'selKecamatan', pId: document.getElementById('selKabupaten')?.value, attr: 'data-kab' },
+        { c: 'selDesa', pId: document.getElementById('selKecamatan')?.value, attr: 'data-kec' }
+      ];
+      sels.forEach(combo => {
+        const child = document.getElementById(combo.c);
+        if(!child) return;
+        child.querySelectorAll('option[' + combo.attr + ']').forEach(opt => {
+           opt.style.display = (!combo.pId || opt.getAttribute(combo.attr) === combo.pId) ? '' : 'none';
+        });
+      });
+    }
+
+    cascadeFilter('selProvinsi', 'selKabupaten', 'data-prov');
+    cascadeFilter('selKabupaten', 'selKecamatan', 'data-kab');
+    cascadeFilter('selKecamatan', 'selDesa', 'data-kec');
+    initCascadeFilters();
   </script>
 </body>
 </html>

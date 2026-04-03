@@ -38,8 +38,8 @@ if (isset($_POST['hapus_akun'])) {
     if ($konfirmasiHapus !== 'HAPUS') {
         $error = 'Ketik "HAPUS" untuk mengonfirmasi penghapusan akun.';
     } else {
-        // Hapus freelance terkait
-        $pdo->prepare("DELETE FROM freelance WHERE id_pengguna = ?")->execute([$userId]);
+        // Hapus layanan terkait
+        $pdo->prepare("DELETE FROM layanan WHERE id_pengguna = ?")->execute([$userId]);
         // Hapus pengguna
         $pdo->prepare("DELETE FROM pengguna WHERE id_pengguna = ?")->execute([$userId]);
         session_destroy();

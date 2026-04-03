@@ -1,8 +1,8 @@
 <?php
-require_once 'config/database.php';
+require_once __DIR__ . '/../config/database.php';
 
 // Jika sudah login, redirect ke dashboard
-if (isLoggedIn()) {
+if (isAdminLoggedIn()) {
     header('Location: index.php');
     exit;
 }
