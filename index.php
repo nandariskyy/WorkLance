@@ -102,7 +102,7 @@ $userName = $_SESSION['user_nama'] ?? '';
   </style>
 </head>
 
-<body class="bg-gray-50 text-gray-800 font-sans antialiased overflow-x-hidden">
+<body class="bg-gray-40 text-gray-800 font-sans antialiased overflow-x-hidden">
 
   <!-- Navbar -->
   <nav class="sticky top-0 z-50 glass-effect">
