@@ -8,14 +8,16 @@ $error = '';
 
 // Proses simpan booking jika POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $loggedIn) {
-    $id_jasa = (int)($_POST['id_jasa'] ?? 0);
+    // Expected id_jasa to be updated to id_layanan to match new table structure
+    $id_layanan = (int)($_POST['id_layanan'] ?? 0);
     $tanggal = $_POST['tanggal_booking'] ?? '';
+    // Expected alamat to be submitted from localStorage's data.alamat
     $alamat = trim($_POST['alamat_booking'] ?? '');
     $catatan = trim($_POST['catatan'] ?? '');
 
-    if ($id_jasa && $tanggal && $alamat) {
-        $stmt = $pdo->prepare("INSERT INTO booking (id_pengguna, id_jasa, tanggal_booking, alamat_booking, catatan, status_booking) VALUES (?, ?, ?, ?, ?, 'MENUNGGU')");
-        $stmt->execute([$_SESSION['user_id'], $id_jasa, $tanggal, $alamat, $catatan]);
+    if ($id_layanan && $tanggal && $alamat) {
+        $stmt = $pdo->prepare("INSERT INTO booking (id_pengguna, id_layanan, tanggal_booking, alamat_booking, catatan, status_booking) VALUES (?, ?, ?, ?, ?, 'MENUNGGU')");
+        $stmt->execute([$_SESSION['user_id'], $id_layanan, $tanggal, $alamat, $catatan]);
         $bookingSaved = true;
     } else {
         $error = 'Data booking tidak lengkap.';
@@ -153,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $loggedIn) {
       <div class="flex flex-col sm:flex-row gap-4">
         <?php if ($loggedIn): ?>
         <form method="POST" action="" id="confirmForm" class="flex-1">
-          <input type="hidden" name="id_jasa" id="formIdJasa">
+          <input type="hidden" name="id_layanan" id="formIdLayanan">
           <input type="hidden" name="tanggal_booking" id="formTanggal">
           <input type="hidden" name="alamat_booking" id="formAlamat">
           <input type="hidden" name="catatan" id="formCatatan">
@@ -198,8 +200,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $loggedIn) {
       document.getElementById('sumCatatan').textContent = data.catatan || '-';
 
       // Fill hidden form
-      const fIdJasa = document.getElementById('formIdJasa');
-      if (fIdJasa) fIdJasa.value = data.idJasa;
+      const fIdLayanan = document.getElementById('formIdLayanan');
+      if (fIdLayanan) fIdLayanan.value = data.idLayanan;
       const fTanggal = document.getElementById('formTanggal');
       if (fTanggal) fTanggal.value = data.tanggal;
       const fAlamat = document.getElementById('formAlamat');

@@ -95,31 +95,7 @@ if (!empty($filteredLayananIds)) {
 $loggedIn = isClientLoggedIn();
 $userName = $_SESSION['user_nama'] ?? '';
 
-// Check if booking POST is sent
-$success = '';
-$error = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'booking') {
-    if (!$loggedIn) {
-        header('Location: login.php');
-        exit;
-    }
-    
-    $booking_layanan_id = (int)$_POST['id_layanan']; // from select input
-    $catatan = trim($_POST['catatan']);
-    $tanggal = trim($_POST['tanggal']);
-    
-    if (empty($booking_layanan_id) || empty($catatan) || empty($tanggal)) {
-        $error = 'Semua field wajib diisi.';
-    } else {
-        try {
-            $stmt = $pdo->prepare("INSERT INTO booking (id_pengguna, id_layanan, tanggal_booking, catatan, status_booking, alamat_booking) VALUES (?, ?, ?, ?, 'MENUNGGU', '-')");
-            $stmt->execute([$_SESSION['user_id'], $booking_layanan_id, $tanggal, $catatan]);
-            $success = 'Pemesanan berhasil! Silakan tunggu freelancer menghubungi Anda.';
-        } catch (Exception $e) {
-            $error = 'Gagal menyimpan pesanan. Silakan coba lagi.';
-        }
-    }
-}
+
 ?>
 <!DOCTYPE html>
 <html lang="id" class="scroll-smooth">
@@ -205,16 +181,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
   <!-- Main Content -->
   <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 flex-grow w-full">
     
-    <?php if ($success): ?>
-    <div class="mb-8 p-4 bg-green-50 border border-green-200 text-green-700 rounded-xl font-medium w-full shadow-sm text-center">
-      <?= htmlspecialchars($success) ?>
-    </div>
-    <?php endif; ?>
-    <?php if ($error): ?>
-    <div class="mb-8 p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl font-medium w-full shadow-sm text-center">
-      <?= htmlspecialchars($error) ?>
-    </div>
-    <?php endif; ?>
+    <!-- No more server-side alerts needed here -->
 
     <div class="flex flex-col lg:flex-row gap-8 items-start">
       
@@ -329,16 +296,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             </div>
           </div>
 
-          <form action="" method="POST" class="space-y-5">
-            <input type="hidden" name="action" value="booking">
-            
+          <form id="bookingForm" class="space-y-5">
             <div>
               <label class="block text-sm font-bold text-dark mb-2">Jenis Jasa <span class="text-red-500">*</span></label>
               <div class="relative">
-                <select name="id_layanan" required class="w-full border border-gray-200 rounded-xl pl-4 pr-10 py-3.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark appearance-none cursor-pointer">
+                <select id="selLayanan" required class="w-full border border-gray-200 rounded-xl pl-4 pr-10 py-3.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark appearance-none cursor-pointer">
                   <option value="">Pilih layanan...</option>
                   <?php foreach ($offeredJasaList as $oj): ?>
-                  <option value="<?= $oj['id_layanan'] ?>"><?= htmlspecialchars($oj['nama_jasa']) ?></option>
+                  <option value="<?= $oj['id_layanan'] ?>" data-nama="<?= htmlspecialchars($oj['nama_jasa']) ?>"><?= htmlspecialchars($oj['nama_jasa']) ?></option>
                   <?php endforeach; ?>
                 </select>
                 <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
@@ -349,13 +314,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
             <div>
               <label class="block text-sm font-bold text-dark mb-2">Deskripsi Pekerjaan <span class="text-red-500">*</span></label>
-              <textarea name="catatan" rows="4" required placeholder="Ceritakan detail proyek, target pengguna, dan apa yang Anda butuhkan..." class="w-full border border-gray-200 rounded-xl px-4 py-3.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark resize-none"></textarea>
+              <textarea id="inpCatatan" rows="4" required placeholder="Ceritakan detail proyek, target pengguna, dan apa yang Anda butuhkan..." class="w-full border border-gray-200 rounded-xl px-4 py-3.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark resize-none"></textarea>
+            </div>
+
+            <div>
+              <label class="block text-sm font-bold text-dark mb-2">Alamat Lengkap <span class="text-red-500">*</span></label>
+              <textarea id="inpAlamat" rows="3" required placeholder="Masukkan alamat lengkap pengerjaan proyek / alamat anda..." class="w-full border border-gray-200 rounded-xl px-4 py-3.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark resize-none"></textarea>
             </div>
 
             <div>
               <label class="block text-sm font-bold text-dark mb-2">Kapan proyek ini harus selesai? <span class="text-red-500">*</span></label>
               <div class="relative">
-                <input type="date" name="tanggal" required min="<?= date('Y-m-d') ?>" class="w-full border border-gray-200 rounded-xl pl-4 pr-10 py-3.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark">
+                <input type="date" id="inpTanggal" required min="<?= date('Y-m-d') ?>" class="w-full border border-gray-200 rounded-xl pl-4 pr-10 py-3.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-sm font-medium text-dark">
               </div>
             </div>
 
@@ -414,6 +384,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         document.getElementById('btnDeskripsi').classList.remove('text-accent', 'border-accent');
         document.getElementById('btnDeskripsi').classList.add('text-gray-400', 'border-transparent');
       }
+    }
+
+    const bookingForm = document.getElementById('bookingForm');
+    if (bookingForm) {
+      bookingForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const selLayanan = document.getElementById('selLayanan');
+        const idLayanan = selLayanan.value;
+        const namaJasa = selLayanan.options[selLayanan.selectedIndex].getAttribute('data-nama');
+        const catatan = document.getElementById('inpCatatan').value;
+        const alamat = document.getElementById('inpAlamat').value;
+        const tanggal = document.getElementById('inpTanggal').value;
+        
+        const bookingData = {
+          idLayanan: idLayanan,
+          namaJasa: namaJasa,
+          freelancerNama: <?= json_encode($profileData['nama_pengguna']) ?>,
+          freelancerTelp: <?= json_encode($profileData['no_telp']) ?>,
+          freelancerTarif: <?= json_encode($profileData['tarif']) ?>,
+          freelancerSatuan: <?= json_encode($profileData['nama_satuan']) ?>,
+          catatan: catatan,
+          alamat: alamat,
+          tanggal: tanggal
+        };
+        
+        localStorage.setItem('worklance_booking', JSON.stringify(bookingData));
+        window.location.href = 'ringkasan-pesanan.php';
+      });
     }
   </script>
 </body>

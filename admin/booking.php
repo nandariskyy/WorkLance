@@ -61,18 +61,20 @@ if ($filterStatus !== '') {
     $params[] = $filterStatus;
 }
 if ($search !== '') {
-    $where .= " AND (p.nama_pengguna LIKE ? OR j.nama_jasa LIKE ? OR b.alamat_booking LIKE ?)";
+    $where .= " AND (p.nama_pengguna LIKE ? OR pf.nama_pengguna LIKE ? OR j.nama_jasa LIKE ? OR b.alamat_booking LIKE ?)";
+    $params[] = "%$search%";
     $params[] = "%$search%";
     $params[] = "%$search%";
     $params[] = "%$search%";
 }
 
 $stmt = $pdo->prepare("
-    SELECT b.*, p.nama_pengguna AS nama_client, j.nama_jasa
+    SELECT b.*, p.nama_pengguna AS nama_client, j.nama_jasa, pf.nama_pengguna AS nama_freelancer
     FROM booking b
     LEFT JOIN pengguna p ON b.id_pengguna = p.id_pengguna
     LEFT JOIN layanan l ON b.id_layanan = l.id_layanan
     LEFT JOIN jasa j ON l.id_jasa = j.id_jasa
+    LEFT JOIN pengguna pf ON l.id_pengguna = pf.id_pengguna
     WHERE $where
     ORDER BY b.id_booking DESC
 ");
@@ -90,12 +92,13 @@ $countBatal = $pdo->query("SELECT COUNT(*) FROM booking WHERE status_booking='DI
 $detailData = null;
 if (isset($_GET['detail'])) {
     $stmt = $pdo->prepare("
-        SELECT b.*, p.nama_pengguna AS nama_client, p.email, p.no_telp, j.nama_jasa, k.nama_kategori
+        SELECT b.*, p.nama_pengguna AS nama_client, p.email, p.no_telp, j.nama_jasa, k.nama_kategori, pf.nama_pengguna AS nama_freelancer
         FROM booking b
         LEFT JOIN pengguna p ON b.id_pengguna = p.id_pengguna
         LEFT JOIN layanan l ON b.id_layanan = l.id_layanan
         LEFT JOIN jasa j ON l.id_jasa = j.id_jasa
         LEFT JOIN kategori k ON j.id_kategori = k.id_kategori
+        LEFT JOIN pengguna pf ON l.id_pengguna = pf.id_pengguna
         WHERE b.id_booking = ?
     ");
     $stmt->execute([(int)$_GET['detail']]);
@@ -242,6 +245,7 @@ if (isset($_GET['detail'])) {
               <tr class="bg-gray-50/50 text-gray-500 text-xs uppercase tracking-wider">
                 <th class="p-4 pl-6 font-semibold">ID</th>
                 <th class="p-4 font-semibold">Client</th>
+                <th class="p-4 font-semibold">Freelancer</th>
                 <th class="p-4 font-semibold">Jasa</th>
                 <th class="p-4 font-semibold">Tanggal</th>
                 <th class="p-4 font-semibold">Status</th>
@@ -258,6 +262,7 @@ if (isset($_GET['detail'])) {
                 <td class="p-4">
                   <p class="font-bold text-dark text-sm whitespace-nowrap"><?= htmlspecialchars($bk['nama_client'] ?? '-') ?></p>
                 </td>
+                <td class="p-4 text-sm font-semibold text-accent whitespace-nowrap"><?= htmlspecialchars($bk['nama_freelancer'] ?? '-') ?></td>
                 <td class="p-4 text-sm text-gray-600"><?= htmlspecialchars($bk['nama_jasa'] ?? '-') ?></td>
                 <td class="p-4 text-sm text-gray-500 whitespace-nowrap"><?= $bk['tanggal_booking'] ? formatTanggal($bk['tanggal_booking']) : '-' ?></td>
                 <td class="p-4">
@@ -315,6 +320,10 @@ if (isset($_GET['detail'])) {
           <div>
             <p class="text-xs text-gray-400 font-semibold uppercase mb-1">Kategori</p>
             <p class="text-sm text-gray-600"><?= htmlspecialchars($detailData['nama_kategori'] ?? '-') ?></p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-400 font-semibold uppercase mb-1">Freelancer</p>
+            <p class="text-sm font-bold text-accent"><?= htmlspecialchars($detailData['nama_freelancer'] ?? '-') ?></p>
           </div>
           <div>
             <p class="text-xs text-gray-400 font-semibold uppercase mb-1">Jasa</p>

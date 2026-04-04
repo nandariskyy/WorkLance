@@ -116,7 +116,10 @@ $isFreelancer = !empty($checkedJasa);
           <span class="text-2xl font-bold text-dark tracking-tight">Work<span class="text-accent">Lance</span></span>
         </a>
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 bg-primary/20 text-primary rounded-full flex items-center justify-center font-bold relative">
+          <a href="kelola-jasa.php" class="px-5 py-2.5 bg-accent/10 border border-accent/20 text-accent rounded-full text-sm font-bold transition-colors hidden sm:block">Kelola Jasa</a>
+          <a href="pesanan.php" class="px-4 py-2 text-sm font-bold text-gray-500 hover:text-dark transition-colors mr-2 hidden sm:block">Pesanan Masuk</a>
+
+          <div class="w-10 h-10 bg-primary/20 text-primary rounded-full flex items-center justify-center font-bold relative ml-4">
             <?= getInitials($userName) ?>
             <div class="absolute bottom-0 right-0 w-3 h-3 <?= $isFreelancer ? 'bg-green-500' : 'bg-gray-400' ?> border-2 border-white rounded-full" title="<?= $isFreelancer ? 'Online' : 'Offline' ?>"></div>
           </div>
