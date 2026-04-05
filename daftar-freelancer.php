@@ -84,8 +84,10 @@ $desaList = $pdo->query("SELECT * FROM desa ORDER BY nama_desa")->fetchAll();
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pendaftaran Freelancer | WorkLance</title>
   <meta name="description" content="Daftar sebagai freelancer di WorkLance. Lengkapi data dirimu dan ajukan pendaftaran." />
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <style type="text/tailwindcss">
     @theme {
       --color-primary: #96B3BF;
@@ -95,9 +97,13 @@ $desaList = $pdo->query("SELECT * FROM desa ORDER BY nama_desa")->fetchAll();
       --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
     }
     @layer utilities {
-      .glass-effect { @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-lg; }
+      .glass-effect {
+        @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-lg;
+      }
     }
   </style>
+  <link rel="stylesheet" href="/WorkLance/src/style.css">
+  <script type="module" src="/WorkLance/src/main.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen font-sans flex flex-col antialiased">
 

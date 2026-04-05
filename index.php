@@ -86,8 +86,10 @@ $userName = $_SESSION['user_nama'] ?? '';
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WorkLance - Temukan Freelancer Lokal Terbaik</title>
   <meta name="description" content="WorkLance adalah platform marketplace freelancer lokal. Temukan tenaga profesional terbaik di sekitarmu dengan mudah, cepat, dan transparan." />
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <style type="text/tailwindcss">
     @theme {
       --color-primary: #96B3BF;
@@ -102,6 +104,8 @@ $userName = $_SESSION['user_nama'] ?? '';
       }
     }
   </style>
+  <link rel="stylesheet" href="/WorkLance/src/style.css">
+  <script type="module" src="/WorkLance/src/main.js"></script>
 </head>
 
 <body class="bg-gray-50 text-gray-800 font-sans antialiased overflow-x-hidden">

@@ -67,6 +67,25 @@ if (isset($_GET['edit'])) {
     $editData = $stmt->fetch();
 }
 
+// AMBIL DATA UNTUK DETAIL
+$detailData = null;
+if (isset($_GET['detail'])) {
+    $stmt = $pdo->prepare("
+        SELECT p.*, r.nama_role, 
+               pr.nama_provinsi, kb.nama_kabupaten, 
+               kc.nama_kecamatan, ds.nama_desa
+        FROM pengguna p
+        LEFT JOIN role r ON p.id_role = r.id_role
+        LEFT JOIN provinsi pr ON p.id_provinsi = pr.id_provinsi
+        LEFT JOIN kabupaten kb ON p.id_kabupaten = kb.id_kabupaten
+        LEFT JOIN kecamatan kc ON p.id_kecamatan = kc.id_kecamatan
+        LEFT JOIN desa ds ON p.id_desa = ds.id_desa
+        WHERE p.id_pengguna = ?
+    ");
+    $stmt->execute([(int)$_GET['detail']]);
+    $detailData = $stmt->fetch();
+}
+
 // AMBIL SEMUA PENGGUNA
 $filterRole = $_GET['role'] ?? '';
 $search = $_GET['search'] ?? '';
@@ -104,8 +123,10 @@ $roles = $pdo->query("SELECT * FROM role ORDER BY id_role")->fetchAll();
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kelola Pengguna | Admin WorkLance</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <style type="text/tailwindcss">
     @theme {
       --color-primary: #96B3BF;
@@ -114,7 +135,14 @@ $roles = $pdo->query("SELECT * FROM role ORDER BY id_role")->fetchAll();
       --color-secondary: #CC7A55;
       --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
     }
+    @layer utilities {
+      .glass-effect {
+        @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-lg;
+      }
+    }
   </style>
+  <link rel="stylesheet" href="/WorkLance/src/style.css">
+  <script type="module" src="/WorkLance/src/main.js"></script>
 </head>
 <body class="bg-gray-50 font-sans text-gray-800 h-screen flex overflow-hidden">
 
@@ -129,7 +157,7 @@ $roles = $pdo->query("SELECT * FROM role ORDER BY id_role")->fetchAll();
     </div>
     <div class="flex-1 overflow-y-auto py-6 px-4 space-y-1.5 scrollbar-hide">
       <div class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-4">Utama</div>
-      <a href="index.php" class="flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-white/5 hover:text-white rounded-xl font-medium transition-colors">
+      <a href="dashboard.php" class="flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-white/5 hover:text-white rounded-xl font-medium transition-colors">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
         Dashboard
       </a>
@@ -145,7 +173,7 @@ $roles = $pdo->query("SELECT * FROM role ORDER BY id_role")->fetchAll();
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
         Booking
       </a>
-      <a href="verifikasi.php" class="flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-white/5 hover:text-white rounded-xl font-medium transition-colors">
+      <a href="pengajuan.php" class="flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-white/5 hover:text-white rounded-xl font-medium transition-colors">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
         Pengajuan
       </a>
@@ -267,6 +295,9 @@ $roles = $pdo->query("SELECT * FROM role ORDER BY id_role")->fetchAll();
                 </td>
                 <td class="p-4 pr-6 text-right">
                   <div class="flex items-center justify-end gap-2">
+                    <a href="pengguna.php?detail=<?= $pg['id_pengguna'] ?>" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Detail">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                    </a>
                     <a href="pengguna.php?edit=<?= $pg['id_pengguna'] ?>" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                     </a>
@@ -349,6 +380,77 @@ $roles = $pdo->query("SELECT * FROM role ORDER BY id_role")->fetchAll();
       </form>
     </div>
   </div>
+
+  <!-- Modal Detail -->
+  <?php if ($detailData): ?>
+  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+        <h3 class="font-bold text-dark text-lg">Detail Pengguna #<?= $detailData['id_pengguna'] ?></h3>
+        <a href="pengguna.php<?= $filterRole ? '?role='.$filterRole : '' ?>" class="p-2 text-gray-400 hover:text-dark hover:bg-gray-100 rounded-lg transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </a>
+      </div>
+      <div class="p-6 space-y-5">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-2xl">
+            <?= getInitials($detailData['nama_pengguna']) ?>
+          </div>
+          <div>
+            <h4 class="font-bold text-dark text-lg"><?= htmlspecialchars($detailData['nama_pengguna']) ?></h4>
+            <p class="text-sm text-gray-500">@<?= htmlspecialchars($detailData['username']) ?></p>
+            <span class="mt-1 px-2.5 py-0.5 bg-gray-100 text-gray-600 border border-gray-200 rounded text-[10px] font-bold tracking-wide inline-block uppercase"><?= htmlspecialchars($detailData['nama_role']) ?></span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <p class="text-xs text-gray-400 font-semibold uppercase mb-1">Email</p>
+            <p class="text-sm font-medium text-dark"><?= htmlspecialchars($detailData['email'] ?? '-') ?></p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-400 font-semibold uppercase mb-1">No. Telp</p>
+            <p class="text-sm font-medium text-dark"><?= htmlspecialchars($detailData['no_telp'] ?? '-') ?></p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-400 font-semibold uppercase mb-1">Tanggal Lahir</p>
+            <p class="text-sm font-medium text-dark"><?= $detailData['tanggal_lahir'] ? date('d M Y', strtotime($detailData['tanggal_lahir'])) : '-' ?></p>
+          </div>
+        </div>
+
+        <hr class="border-gray-100">
+
+        <!-- Info Alamat -->
+        <div>
+          <h5 class="text-sm font-bold text-primary mb-3">Informasi Alamat</h5>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <p class="text-xs text-gray-400 font-semibold uppercase mb-1">Provinsi</p>
+              <p class="text-sm font-medium text-dark"><?= htmlspecialchars($detailData['nama_provinsi'] ?? '-') ?></p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-400 font-semibold uppercase mb-1">Kabupaten/Kota</p>
+              <p class="text-sm font-medium text-dark"><?= htmlspecialchars($detailData['nama_kabupaten'] ?? '-') ?></p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-400 font-semibold uppercase mb-1">Kecamatan</p>
+              <p class="text-sm font-medium text-dark"><?= htmlspecialchars($detailData['nama_kecamatan'] ?? '-') ?></p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-400 font-semibold uppercase mb-1">Desa/Kelurahan</p>
+              <p class="text-sm font-medium text-dark"><?= htmlspecialchars($detailData['nama_desa'] ?? '-') ?></p>
+            </div>
+          </div>
+          <div class="mt-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
+            <p class="text-xs text-gray-400 font-semibold uppercase mb-1">Alamat Lengkap</p>
+            <p class="text-sm text-gray-600"><?= htmlspecialchars($detailData['alamat_lengkap'] ?? '(Belum ada data alamat)') ?></p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  <?php endif; ?>
 
 </body>
 </html>

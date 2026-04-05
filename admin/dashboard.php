@@ -41,21 +41,16 @@ $stmtKategori = $pdo->query("
 $kategoriPopuler = $stmtKategori->fetchAll();
 $maxKategori = !empty($kategoriPopuler) ? max(array_column($kategoriPopuler, 'total')) : 1;
 
-// Freelancer belum terverifikasi / terbaru (join pengguna, kategori)
-$stmtNewFreelancer = $pdo->query("
-    SELECT p.id_pengguna, p.nama_pengguna, 
-           (SELECT k.nama_kategori 
-            FROM layanan l 
-            JOIN jasa j ON l.id_jasa = j.id_jasa 
-            JOIN kategori k ON j.id_kategori = k.id_kategori 
-            WHERE l.id_pengguna = p.id_pengguna 
-            LIMIT 1) AS nama_kategori
-    FROM pengguna p
-    WHERE p.id_role = 3
-    ORDER BY p.id_pengguna DESC
-    LIMIT 3
+// Pengajuan/Verifikasi Terbaru
+$stmtPengajuan = $pdo->query("
+    SELECT pf.*, p.nama_pengguna, p.no_telp
+    FROM pengajuan_freelancer pf
+    JOIN pengguna p ON pf.id_pengguna = p.id_pengguna
+    WHERE pf.status = 'MENUNGGU'
+    ORDER BY pf.tanggal_pengajuan DESC
+    LIMIT 5
 ");
-$newFreelancers = $stmtNewFreelancer->fetchAll();
+$newPengajuan = $stmtPengajuan->fetchAll();
 
 // Status badge helper
 function getStatusBadge($status) {
@@ -92,8 +87,10 @@ $currentPage = 'dashboard';
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard | WorkLance</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <style type="text/tailwindcss">
     @theme {
       --color-primary: #96B3BF;
@@ -102,7 +99,14 @@ $currentPage = 'dashboard';
       --color-secondary: #CC7A55;
       --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
     }
+    @layer utilities {
+      .glass-effect {
+        @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-lg;
+      }
+    }
   </style>
+  <link rel="stylesheet" href="/WorkLance/src/style.css">
+  <script type="module" src="/WorkLance/src/main.js"></script>
 </head>
 <body class="bg-gray-50 font-sans text-gray-800 h-screen flex overflow-hidden">
 
@@ -120,7 +124,7 @@ $currentPage = 'dashboard';
     <!-- Nav Links -->
     <div class="flex-1 overflow-y-auto py-6 px-4 space-y-1.5 scrollbar-hide">
       <div class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-4">Utama</div>
-      <a href="index.php" class="flex items-center gap-3 px-4 py-3 <?= $currentPage === 'dashboard' ? 'bg-white/10 text-white border border-white/5' : 'text-gray-400 hover:bg-white/5 hover:text-white' ?> rounded-xl font-medium transition-colors">
+      <a href="dashboard.php" class="flex items-center gap-3 px-4 py-3 <?= $currentPage === 'dashboard' ? 'bg-white/10 text-white border border-white/5' : 'text-gray-400 hover:bg-white/5 hover:text-white' ?> rounded-xl font-medium transition-colors">
         <svg class="w-5 h-5 <?= $currentPage === 'dashboard' ? 'text-primary' : '' ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path>
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path>
@@ -145,7 +149,7 @@ $currentPage = 'dashboard';
         </svg>
         Booking
       </a>
-      <a href="verifikasi.php" class="flex items-center gap-3 px-4 py-3 <?= $currentPage === 'verifikasi' ? 'bg-white/10 text-white border border-white/5' : 'text-gray-400 hover:bg-white/5 hover:text-white' ?> rounded-xl font-medium transition-colors">
+      <a href="pengajuan.php" class="flex items-center gap-3 px-4 py-3 <?= $currentPage === 'verifikasi' ? 'bg-white/10 text-white border border-white/5' : 'text-gray-400 hover:bg-white/5 hover:text-white' ?> rounded-xl font-medium transition-colors">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
         Pengajuan
       </a>
@@ -335,30 +339,36 @@ $currentPage = 'dashboard';
 
         <!-- Sidebar Widgets -->
         <div class="space-y-6">
-          <!-- New Freelancers -->
+          <!-- New Pengajuan -->
           <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h3 class="font-bold text-dark text-lg mb-4">Freelancer Terbaru</h3>
+            <h3 class="font-bold text-dark text-lg mb-4">Pengajuan Terbaru</h3>
             <div class="space-y-4">
-              <?php if (empty($newFreelancers)): ?>
-              <p class="text-gray-400 text-sm text-center py-4">Belum ada freelancer.</p>
+              <?php if (empty($newPengajuan)): ?>
+              <p class="text-gray-400 text-sm text-center py-4">Belum ada pengajuan.</p>
               <?php else: ?>
-              <?php foreach ($newFreelancers as $nf): ?>
+              <?php foreach ($newPengajuan as $pj): ?>
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
                   <div class="w-10 h-10 rounded-full bg-orange-50 text-accent flex items-center justify-center font-bold">
-                    <?= getInitials($nf['nama_pengguna'] ?? 'N/A') ?>
+                    <?= getInitials($pj['nama_pengguna'] ?? 'N/A') ?>
                   </div>
                   <div>
-                    <p class="text-sm font-bold text-dark"><?= htmlspecialchars($nf['nama_pengguna'] ?? '-') ?></p>
-                    <p class="text-xs text-gray-500"><?= htmlspecialchars($nf['nama_kategori'] ?? '-') ?></p>
+                    <p class="text-sm font-bold text-dark mb-0.5"><?= htmlspecialchars($pj['nama_pengguna'] ?? '-') ?></p>
+                    <?php if ($pj['status'] === 'MENUNGGU'): ?>
+                      <span class="px-2 py-0.5 bg-yellow-50 text-yellow-600 border border-yellow-200 rounded text-[10px] font-bold tracking-wide inline-block">MENUNGGU</span>
+                    <?php elseif ($pj['status'] === 'DITERIMA'): ?>
+                      <span class="px-2 py-0.5 bg-green-50 text-green-600 border border-green-200 rounded text-[10px] font-bold tracking-wide inline-block">DITERIMA</span>
+                    <?php else: ?>
+                      <span class="px-2 py-0.5 bg-red-50 text-red-600 border border-red-200 rounded text-[10px] font-bold tracking-wide inline-block">DITOLAK</span>
+                    <?php endif; ?>
                   </div>
                 </div>
-                <a href="freelancer.php" class="text-sm px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg font-bold transition-colors">Detail</a>
+                <a href="pengajuan.php" class="text-sm px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg font-bold transition-colors">Detail</a>
               </div>
               <?php endforeach; ?>
               <?php endif; ?>
             </div>
-            <a href="freelancer.php" class="block w-full mt-5 py-2 text-sm font-bold text-gray-500 hover:bg-gray-50 hover:text-dark rounded-lg transition-colors border border-gray-200 text-center">
+            <a href="pengajuan.php" class="block w-full mt-5 py-2 text-sm font-bold text-gray-500 hover:bg-gray-50 hover:text-dark rounded-lg transition-colors border border-gray-200 text-center">
               Lihat Semua
             </a>
           </div>

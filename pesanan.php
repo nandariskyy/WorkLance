@@ -65,8 +65,10 @@ $pesananList = $stmtPesan->fetchAll();
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pesanan Masuk | WorkLance</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <style type="text/tailwindcss">
     @theme {
       --color-primary: #96B3BF;
@@ -76,9 +78,13 @@ $pesananList = $stmtPesan->fetchAll();
       --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
     }
     @layer utilities {
-      .glass-effect { @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-lg; }
+      .glass-effect {
+        @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-lg;
+      }
     }
   </style>
+  <link rel="stylesheet" href="/WorkLance/src/style.css">
+  <script type="module" src="/WorkLance/src/main.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans antialiased min-h-screen flex flex-col">
 

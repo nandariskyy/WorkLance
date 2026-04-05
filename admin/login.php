@@ -3,7 +3,7 @@ require_once __DIR__ . '/../config/database.php';
 
 // Jika sudah login, redirect ke dashboard
 if (isAdminLoggedIn()) {
-    header('Location: index.php');
+    header('Location: dashboard.php');
     exit;
 }
 
@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['admin_id'] = $admin['id_pengguna'];
             $_SESSION['admin_nama'] = $admin['nama_pengguna'];
             $_SESSION['admin_email'] = $admin['email'];
-            header('Location: index.php');
+            header('Location: dashboard.php');
             exit;
         } else {
             $error = 'Email atau password salah, atau Anda bukan admin.';
@@ -39,8 +39,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Login | WorkLance</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <style type="text/tailwindcss">
     @theme {
       --color-primary: #96B3BF;
@@ -49,7 +51,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       --color-secondary: #CC7A55;
       --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
     }
+    @layer utilities {
+      .glass-effect {
+        @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-lg;
+      }
+    }
   </style>
+  <link rel="stylesheet" href="/WorkLance/src/style.css">
+  <script type="module" src="/WorkLance/src/main.js"></script>
 </head>
 <body class="bg-dark flex justify-center min-h-screen font-sans">
   <div class="flex flex-col md:flex-row w-full flex-1">
