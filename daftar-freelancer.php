@@ -87,23 +87,7 @@ $desaList = $pdo->query("SELECT * FROM desa ORDER BY nama_desa")->fetchAll();
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  <style type="text/tailwindcss">
-    @theme {
-      --color-primary: #96B3BF;
-      --color-dark: #121843;
-      --color-accent: #C1572A;
-      --color-secondary: #CC7A55;
-      --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-    }
-    @layer utilities {
-      .glass-effect {
-        @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-lg;
-      }
-    }
-  </style>
-  <link rel="stylesheet" href="/WorkLance/src/style.css">
-  <script type="module" src="/WorkLance/src/main.js"></script>
+  <link rel="stylesheet" href="/WorkLance/src/output.css">
 </head>
 <body class="bg-gray-50 min-h-screen font-sans flex flex-col antialiased">
 
