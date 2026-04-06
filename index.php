@@ -67,13 +67,6 @@ $kategoriIcons = [
     8 => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>',
 ];
 
-// Placeholder photos for freelancers
-$freelancerPhotos = [
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200',
-    'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=200',
-    'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200',
-    'https://images.unsplash.com/photo-1531384441138-2736e62e0919?auto=format&fit=crop&q=80&w=200',
-];
 
 $loggedIn = isClientLoggedIn();
 $userName = $_SESSION['user_nama'] ?? '';
@@ -343,7 +336,9 @@ $userName = $_SESSION['user_nama'] ?? '';
               <?= number_format($fl['avg_rating'], 1) ?>
             </div>
             <div class="flex justify-center mb-6 mt-4">
-              <img src="<?= $freelancerPhotos[$idx % 4] ?>" alt="<?= htmlspecialchars($fl['nama_pengguna']) ?>" class="w-28 h-28 rounded-full object-cover ring-4 ring-primary/20 group-hover:ring-primary/50 transition-all p-1 bg-white">
+              <div class="w-28 h-28 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-4xl ring-4 ring-primary/20 group-hover:ring-primary/50 transition-all p-1">
+                <?= getInitials($fl['nama_pengguna']) ?>
+              </div>
             </div>
             <div class="text-center flex-grow">
               <h3 class="text-xl font-bold text-dark mb-1"><?= htmlspecialchars($fl['nama_pengguna']) ?></h3>
