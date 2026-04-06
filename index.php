@@ -400,7 +400,7 @@ $userName = $_SESSION['user_nama'] ?? '';
           <h2 class="text-4xl md:text-5xl font-bold mb-6">Punya keahlian yang bisa dijual?</h2>
           <p class="text-xl text-blue-50 mb-10 max-w-2xl mx-auto">Bergabung dengan ribuan freelancer sukses lainnya di sekitarmu. Mulai tawarkan jasamu tanpa biaya langganan bulanan.</p>
           <div class="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="register.php" class="bg-accent hover:bg-orange-600 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">Mulai Jadi Freelancer</a>
+            <a href="<?= $loggedIn ? 'daftar-freelancer.php' : 'register.php' ?>" class="bg-accent hover:bg-orange-600 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">Mulai Jadi Freelancer</a>
             <a href="mulai-freelancer.php" class="bg-white/20 hover:bg-white text-white hover:text-dark px-8 py-4 rounded-xl font-bold text-lg transition-all backdrop-blur-sm border border-white/30">Pelajari Lebih Lanjut</a>
           </div>
         </div>
