@@ -8,18 +8,17 @@ use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
      * Seed the application's database.
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        $path = base_path('data.sql');
+        if (file_exists($path)) {
+            \Illuminate\Support\Facades\DB::unprepared(file_get_contents($path));
+            $this->command->info('Database seeded successfully from data.sql');
+        } else {
+            $this->command->error('data.sql file not found in root directory.');
+        }
     }
 }

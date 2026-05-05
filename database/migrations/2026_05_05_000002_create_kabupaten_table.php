@@ -1,0 +1,23 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('kabupaten', function (Blueprint $table) {
+            $table->increments("id_kabupaten");
+            $table->unsignedInteger("id_provinsi")->nullable();
+            $table->string("nama_kabupaten", 50)->nullable();
+            $table->foreign("id_provinsi")->references("id_provinsi")->on("provinsi");
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('kabupaten');
+    }
+};
